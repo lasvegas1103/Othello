@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Othello Board</title>
+	<style>
+		#board {
+			width: 400px;
+			height: 400px;
+			background-color: green;
+			display: flex;
+			flex-wrap: wrap;
+		}
+
+		.square {
+			width: 50px;
+			height: 50px;
+			border: 1px solid black;
+			box-sizing: border-box;
+		}
+
+		.black {
+            position: relative;
+			background-color: black;
+            top: 2px;
+            bottom: 0;
+            left: 2px;
+            width: 42px;
+            height: 42px;
+            border-radius: 21px;
+		}
+
+		.white {
+            position: relative;
+			background-color: white;
+            top: 2px;
+            bottom: 0;
+            left: 2px;
+            width: 42px;
+            height: 42px;
+            border-radius: 21px;
+		}
+	</style>
+</head>
+<body>
+	<div id="board"></div>
+
+	<script>
+        // 変数宣言
+        let whiiteOrBlack = false;
+        let color;
+        let tempReversePiece = [];
+        let reversePiece = [];
+        let totalPiece = 0;
+        let blackCnt = 0;
+        let whiteCnt = 0;
+
+		const board = document.getElementById('board');
+
+        /**
+         * 石の生成 
+         * 
+         */
+        const createPiece = (specifyColor) => {
+            if (specifyColor) {
+                color = specifyColor;
+            } else {
+                color = whiiteOrBlack ? "white" : "black";
+                // 色反転
+                whiiteOrBlack = !whiiteOrBlack;
+            }
+            const piece = document.createElement('div');
+		    piece.classList.add(color);
+
+            return piece;
+        }
+
+		////////// 盤面の作成 ///////////
+        let position = 1;
+		for (let i = 1; i <= 8; i++) {
+			for (let j = 1; j <= 8; j++) {
+				const square = document.createElement('div');
+                square.setAttribute("id", position);
+                square.setAttribute("data-y", i);
+                square.setAttribute("data-x", j);
+                square.setAttribute("onClick", "put(this)");
+				square.classList.add('square');
+
+				board.appendChild(square);
+                position++;
+			}
+		}
+
+		// ピースを配置
+		board.children[27].appendChild(createPiece("black"));
+		board.children[28].appendChild(createPiece("white"));
+		board.children[35].appendChild(createPiece("white"));
+		board.children[36].appendChild(createPiece("black"));
+
+        ////////// 盤面の作成 ///////////
+
+
+        /**
+         * メイン処理（石を置くのと反転させる処理）
+         * 
+         */
+        const put = (elem) => {
+            if (elem.hasChildNodes()) {
+                alert("ここに石は置けません");
+                return;
+            }
+
+            const piece = createPiece();
+            const position = elem.id
+            board.children[parseInt(position) - 1].appendChild(piece);
+            totalPiece++;
+            if (piece.className == "black" ) blackCnt++;
+            if (piece.className == "white" ) whiteCnt++;
+
+            run(elem);
+            
+            // 判定
+            if (totalPiece == 64) {
+                if (blackCnt > 32) {
+                    alert(`${blackCnt}対${whiteCnt}で黒の勝ちです。`)
+                }
+                if (whiteCnt > 32) {
+                    alert(`${whiteCnt}対${blackCnt}で白の勝ちです。`)
+                }
+                if (whiteCnt == blackCnt) {
+                    alert(`${whiteCnt}対${blackCnt}で引き分けです。`)
+                }
+            }
+        }
+
+        /**
+         * 石の反転処理
+         * 
+         */ 
+        const run = (elem) => {
+            const position = elem.id
+            // 反転する石を探す
+            // 左斜め下
+            searchReverse1(
+                     parseInt(position)
+                    ,"+"
+                    ,7);
+
+            // 左斜め上
+            searchReverse1(
+                     parseInt(position)
+                    ,"-"
+                    ,9);
+            // 左
+            searchReverse2(
+                     parseInt(position)
+                    ,"-");
+
+            // 下
+            searchReverse1(
+                     parseInt(position)
+                    ,"+"
+                    ,8);
+
+            // 右斜め下
+            searchReverse1(
+                     parseInt(position)
+                    ,"+"
+                    ,9);
+
+            // 右
+            searchReverse2(
+                     parseInt(position)
+                    ,"+");
+
+            // 右斜め上
+            searchReverse1(
+                     parseInt(position)
+                    ,"-"
+                    ,7);
+
+            // 上
+            searchReverse1(
+                     parseInt(position)
+                    ,"-"
+                    ,8);
+
+            // 石を反転させる
+            reversePiece.forEach((piece) => {
+                piece.children[0].className = color;
+            })
+            // 変数初期化
+            initVar();
+        }
+
+        /**
+         * 上下、右斜め上、右斜め下、左斜め上、左斜め下のコマ検索
+         * 
+         */ 
+        const searchReverse1 = (currentPosition, sign, adjust) => {
+            
+            let isFirst = true;
+            let stopSearch = false;
+            for (let i=1; i <= 8; i++) {
+                let targetPosition;
+                if (sign === "+") {
+                    targetPosition = currentPosition + (adjust * i);
+                } else if (sign === "-") {
+                    targetPosition = currentPosition - (adjust * i);
+                }
+
+                if (stopSearch) break;
+
+                // コマの位置が1〜64以外検索しない
+                if (targetPosition > 64 || targetPosition <= 0) break;
+                // コマのノードを取得
+                const targetSquare = board.children[targetPosition - 1];
+
+                // 子要素の判定処理から共通化、反転する石があるか確認
+                stopSearch = search(targetSquare, isFirst);
+
+                if (isFirst) {
+                    isFirst = false;
+                }
+            }
+        }
+
+        /**
+         * 左と右とコマ検索
+         * 
+         */ 
+        const searchReverse2 = (currentPosition, sign) => {
+            
+            let isFirst = true;
+            let stopSearch = false;
+            for (let i=1; i <= 8; i++) {
+                let targetPosition;
+                if (sign === "+") {
+                    targetPosition = currentPosition + i;
+                } else if (sign === "-") {
+                    targetPosition = currentPosition - i;
+                }
+
+                if (stopSearch) break;
+
+                // コマのノードを取得
+                const currentSquare = board.children[currentPosition - 1];
+                const targetSquare = board.children[targetPosition - 1];
+                // コマの高さを取得
+                const currentY = parseInt(currentSquare.dataset.y);
+                const targetY = parseInt(targetSquare.dataset.y);
+
+                // 検索対象のコマと置いたコマの高さが一致しなかったら処理しない
+                if (currentY != targetY) break;
+
+                // 子要素の判定処理から共通化、反転する石があるか確認
+                stopSearch = search(targetSquare, isFirst);
+
+                if (isFirst) {
+                    isFirst = false;
+                }
+            }
+        }
+
+        /**
+         * 検索共通処理
+         * 
+         */ 
+        const search = (square, isFirst) => {
+            // 子要素が存在する場合、反転させる石なのか確認
+            if (square.hasChildNodes()){
+                const piece = square.children[0];
+                const searchPieceColor = piece.className;     
+                if (isFirst && searchPieceColor == color){
+                    // 反転させる石がないので処理しない
+                    return true;
+                } else if (searchPieceColor != color) {
+                    // 反転させる石を仮配列に格納
+                    tempReversePiece.push(square);
+                } else if (searchPieceColor == color) {
+                    // 反転させる石の数が決まったのでstop
+                    reversePiece = [...reversePiece, ...tempReversePiece];
+                    return true;
+                }
+            } else {
+                // 子要素が存在しない場合、処理しない
+                tempReversePiece = [];
+                return true;
+            }
+        }
+
+
+        /**
+         * 変数の初期化
+         * 
+         */
+        const initVar = () => {
+            reversePiece = [];
+            tempReversePiece = [];
+        }
+	</script>
+</body>
+</html>
